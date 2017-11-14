@@ -1,12 +1,14 @@
 package com.finance.handler;
 
 import com.finance.calculator.RateCalculator;
+import com.finance.data.CreditMarket;
 import com.finance.data.CreditOffer;
 import com.finance.data.LenderProposal;
-import com.finance.output.PrintUtils;
+import com.finance.output.OutputHandler;
+import com.finance.output.PrintHandler;
 
-import java.io.*;
-import java.util.*;
+import java.io.FileNotFoundException;
+import java.util.List;
 
 /**
  * Created by eanayas on 11.11.2017.
@@ -14,61 +16,43 @@ import java.util.*;
 public class CreditHandler {
 
 
-
-    private int loanAmount;
+    private OutputHandler outputHandler;
     private RateCalculator rateCalculator;
     private InputHandler inputHandler;
 
+    public CreditHandler(InputHandler inputHandler, OutputHandler outputHandler) {
 
-
-    public CreditHandler(int loanAmount){
-
-        this.loanAmount = loanAmount;
-        inputHandler = new InputHandler();
-
+        this.inputHandler = inputHandler;
+        this.outputHandler = outputHandler;
     }
 
-    public static void main(String[] args) throws IOException {
-        //get inputs
-       // int loanAmount = Integer.parseInt(args[1]);
-        int loanAmount = 1000;
+    public static void main(String[] args) {
 
-        //String fileName = args[0];
+        OutputHandler outputHandler = new PrintHandler();
+        String args1[] = new String[]{"input.csv","1000"};
+        InputHandler inputHandler = new CSVFileHandler(args1);
 
-        String fileName = "input.csv";
-        CreditHandler creditHandler = new CreditHandler(loanAmount);
-        creditHandler.rateCalculator = creditHandler.getGetCreditRequestFromFile(loanAmount, fileName);
-        creditHandler.handleCreditRequest();
+        if (!inputHandler.validateAmount()) {
+            throw new IllegalArgumentException(Constants.INVALID_AMOUNT);
+        }
+        try {
+            CreditHandler creditHandler = new CreditHandler(inputHandler, outputHandler);
+            creditHandler.rateCalculator = creditHandler.parseFileGetRateCalculator();
+            creditHandler.handleCreditRequest();
+        } catch (FileNotFoundException e) {
+            outputHandler.printOutput(Constants.FILE_NOT_FOUND_ERROR);
+        }
     }
 
-    private RateCalculator getGetCreditRequestFromFile(int loanAmount, String fileName) {
-
-        List<List<String>> lendererFilelines = inputHandler.readLendererFile(fileName);
-        List<LenderProposal> lenderProposalList = getLenderPropasalList(lendererFilelines);
-        return new RateCalculator(loanAmount,lenderProposalList);
+    private RateCalculator parseFileGetRateCalculator() throws FileNotFoundException {
+        List<LenderProposal> lenderProposalList = inputHandler.getProposals();
+        CreditMarket creditMarket = new CreditMarket(lenderProposalList);
+        return new RateCalculator(creditMarket);
     }
 
     private void handleCreditRequest() {
+        int loanAmount = ((CSVFileHandler) inputHandler).getLoanAmount();
         CreditOffer creditOffer = rateCalculator.getOffer(loanAmount);
-        PrintUtils.printMessage(String .valueOf(creditOffer));
+        outputHandler.printOutput(String.valueOf(creditOffer));
     }
-
-    public List<LenderProposal> getLenderPropasalList(List<List<String>> stringList) {
-
-        List<LenderProposal> lenderProposalList = new ArrayList<>();
-        for (List<String> line: stringList
-             ) {
-            LenderProposal lenderProposal = inputHandler.getCreditInfo(line);
-            lenderProposalList.add(lenderProposal);
-
-        }
-        lenderProposalList.sort(LenderProposal::compareByRate);
-        return  lenderProposalList;
-    }
-
-
-
-
-
-
 }

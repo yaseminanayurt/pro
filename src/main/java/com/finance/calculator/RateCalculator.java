@@ -1,66 +1,46 @@
 package com.finance.calculator;
 
+import com.finance.data.CreditMarket;
 import com.finance.data.CreditOffer;
-import com.finance.handler.Constants;
 import com.finance.data.LenderProposal;
+import com.finance.handler.Constants;
 
-import java.util.List;
-import java.util.stream.Stream;
-
-/**
- * Created by eanayas on 11.11.2017.
- */
 public class RateCalculator {
 
-    private int requestedAmount;
-    private  List<LenderProposal> lenderProposalList;
-    private CreditUtils creditUtils;
-    private int totalMarketAmount;
+    private CreditMarket creditMarket;
 
-   public  RateCalculator(int requestedAmount, List<LenderProposal> lenderProposalList){
-       this.requestedAmount = requestedAmount;
-       this.lenderProposalList = lenderProposalList;
-       creditUtils = new CreditUtils();
-       initialize();
-   }
-
-
-    public void initialize(){
-
-        totalMarketAmount = getTotalMarketAmount();
+    public RateCalculator(CreditMarket creditMarket) {
+        this.creditMarket = creditMarket;
     }
 
 
-    //1000
-    public double getRate(int requestedAmount){
+    public double getRate(int requestedAmount) {
 
         int amount = requestedAmount;
-        if(creditUtils.isAmountAvailableInMarket(amount,totalMarketAmount)) {
+        if (isAmountAvailableInMarket(amount, creditMarket.getTotalMarketAmount())) {
 
-            double rate = 0F;
+            double rate = 0.0;
             double result = getRequestedAmountFromLendersList(amount);
 
             rate = result / requestedAmount;
             return rate;
 
-        }else{
+        } else {
 
-            throw new IllegalArgumentException("Amount is not available on the market!");
+            throw new IllegalArgumentException(Constants.INSUFFICIENT_AMOUNT);
         }
 
     }
 
-    public double getRequestedAmountFromLendersList(int amount){
+    public double getRequestedAmountFromLendersList(int amount) {
         double result = 0F;
 
-        for (LenderProposal proposal: lenderProposalList
+        for (LenderProposal proposal : creditMarket.getLenderProposalList()
                 ) {
-
-            //0.69  480
-            double amountSupplied = Math.min(amount,proposal.getCreditAmount());
-            result += (Double)proposal.getRate()*amountSupplied;
+            double amountSupplied = Math.min(amount, proposal.getCreditAmount());
+            result += proposal.getRate() * amountSupplied;
             amount -= amountSupplied;
-            if(amount == 0)
+            if (amount == 0)
                 break;
         }
         return result;
@@ -68,24 +48,44 @@ public class RateCalculator {
 
     }
 
-    public int getTotalMarketAmount(){
-
-        Stream<LenderProposal> lenderProposalStream = lenderProposalList.stream();
-        int creditAmountSum = lenderProposalStream.map(e -> e.getCreditAmount()).reduce(0, (x, y) -> x + y);
-        return creditAmountSum;
-
-    }
 
     public CreditOffer getOffer(int loanAmount) {
 
         double rate = getRate(loanAmount);
-        double monthlyPayment = creditUtils.calculateMonthlyPayment(loanAmount,rate);
-
-        double totalPayment = creditUtils.calculateTotalPayment(Constants.TOTAL_MONTH,monthlyPayment);
-
-        CreditOffer creditOffer = new CreditOffer(monthlyPayment,totalPayment,loanAmount,rate);
+        double monthlyPayment = calculateMonthlyPayment(loanAmount, rate);
+        double totalPayment = calculateTotalPayment(Constants.TOTAL_MONTH, monthlyPayment);
+        CreditOffer creditOffer = new CreditOffer(totalPayment, monthlyPayment, loanAmount, rate);
         return creditOffer;
 
 
+    }
+
+    public double calculateTotalPayment(int totalMonth, double monthlyPayment) {
+
+        return monthlyPayment * totalMonth;
+    }
+
+
+    public double calculateMonthlyPayment(
+            int loanAmount, double interestRate) {
+
+        double monthlyRate = interestRate / 12.0;
+        // The length of the term in months
+        // is the number of years times 12
+        int termInMonths = 36;
+        // Calculate the monthly payment
+        // Typically this formula is provided so
+        // we won't go into the details
+        // The Math.pow() method is used calculate values raised to a power
+        return (loanAmount * monthlyRate) /
+                (1 - Math.pow(1 + monthlyRate, -termInMonths));
+
+    }
+
+    public boolean isAmountAvailableInMarket(int amount, int totalAmount) {
+
+        if (amount > totalAmount)
+            return false;
+        return true;
     }
 }

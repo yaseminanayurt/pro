@@ -6,16 +6,19 @@ package com.finance.data;
 public class LenderProposal {
 
 
-
-    public LenderProposal(String lenderName,double rate,int creditAmount){
-       this.lenderName = lenderName;
+    private int creditAmount;
+    private String lenderName;
+    private double rate;
+    public LenderProposal(String lenderName, double rate, int creditAmount) {
+        this.lenderName = lenderName;
         this.creditAmount = creditAmount;
         this.rate = rate;
     }
 
-   private int creditAmount;
-   private String lenderName;
-   private double rate;
+    public static int compareByRate(LenderProposal lenderProposal1, LenderProposal lenderProposal2) {
+
+        return Double.compare(lenderProposal1.getRate(), lenderProposal2.getRate());
+    }
 
     public int getCreditAmount() {
         return creditAmount;
@@ -29,17 +32,11 @@ public class LenderProposal {
         return rate;
     }
 
-    public static int compareByRate(LenderProposal lenderProposal1, LenderProposal lenderProposal2) {
-
-       return Double.compare(lenderProposal1.getRate(),lenderProposal2.getRate());
-    }
-
     @Override
-    public String toString(){
+    public String toString() {
 
         return "name: " + lenderName + " rate : " + getRate() + " amount : " + getCreditAmount();
     }
-
 
 
 }
